@@ -1,0 +1,34 @@
+#!/usr/bin/env node
+
+const IpfsHttpClient = require('ipfs-http-client')
+const github = require('@actions/github')
+import * as core from '@actions/core'
+const { globSource } = IpfsHttpClient
+console.log('current folder', process.cwd())
+const folder = process.cwd() + '/dist/apps/remix-ide';
+
+(async () => {
+  const host = 'ipfs.remixproject.org'
+  const ipfs = IpfsHttpClient({ host, port: 443, protocol: 'https' })
+  try {
+    let result = await ipfs.add(globSource(folder, { recursive: true}), { pin: false })
+    const hash = result.cid.toString()
+    console.log('ipfs://' + hash)
+    console.log('https://ipfs.remixproject.org/ipfs/' + hash)
+    console.log('https://gateway.ipfs.io/ipfs/' + hash)
+  } catch (e) {
+    console.log(e)
+  }
+
+  try {
+    const octokit = github.getOctokit(core.getInput('token'))
+    await octokit.issues.createComment({
+      owner: 'ethereum',
+      repo: 'remix-project',
+      issue_number: pull.number,
+      body: `published at ` + 'https://ipfs.remixproject.org/ipfs/' + hash
+    })
+  } catch (e) {
+    console.log(e)
+  }
+})()
